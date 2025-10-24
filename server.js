@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 
 
-const cors = require("cors");
+
 app.use(cors({
   origin: [
     "https://your-vercel-app.vercel.app",
