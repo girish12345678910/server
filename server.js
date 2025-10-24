@@ -7,6 +7,17 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
+
+const cors = require("cors");
+app.use(cors({
+  origin: [
+    "https://your-vercel-app.vercel.app",
+    "https://scanme.vercel.app", // add your live domain if any
+    "http://localhost:5173"     // dev only
+  ]
+}));
+
+
 dotenv.config();
 
 const app = express();
