@@ -7,7 +7,9 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
+dotenv.config();
 
+const app = express();
 
 app.use(cors({
   origin: [
@@ -16,20 +18,14 @@ app.use(cors({
     "http://localhost:5173"     // dev only
   ]
 }));
+app.use(express.json());
 
-
-dotenv.config();
-
-const app = express();
 const upload = multer({ 
   storage: multer.memoryStorage(), 
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 const pdfExtract = new PDFExtract();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-app.use(cors());
-app.use(express.json());
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
@@ -66,10 +62,10 @@ app.post('/analyze', upload.single('resume'), async (req, res) => {
       if (!fs.existsSync('temp')) {
         fs.mkdirSync('temp');
       }
-      
+
       const tempPath = path.join('temp', Date.now() + '.pdf');
       fs.writeFileSync(tempPath, req.file.buffer);
-      
+
       try {
         const data = await pdfExtract.extract(tempPath, {});
         resumeText = data.pages.map(p => p.content.map(c => c.str).join(' ')).join('\n');
@@ -79,7 +75,7 @@ app.post('/analyze', upload.single('resume'), async (req, res) => {
           fs.unlinkSync(tempPath);
         }
       }
-      
+
     } else if (req.file.mimetype === 'text/plain') {
       resumeText = req.file.buffer.toString('utf-8');
       console.log('✅ Text extracted');
@@ -117,7 +113,7 @@ Your task:
 
 Return JSON in this format (REPLACE ALL VALUES with your analysis):
 {
-  "overallScore": culatelate from categories>,
+  "overallScore": <calculate from categories>,
   "categoryScores": {
     "atsCompatibility": <0-100 based on format analysis>,
     "workExperience": <0-100 based on experience quality>,
@@ -146,18 +142,17 @@ Return JSON in this format (REPLACE ALL VALUES with your analysis):
 
 DO NOT use example numbers. Analyze the actual resume content and provide real scores.`;
 
-
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let text = response.text();
-    
+
     console.log('✅ Gemini response received');
     console.log('📝 Raw response:', text.substring(0, 200));
-    
+
     // Clean and extract JSON
     text = extractJSON(text);
     console.log('🔍 Cleaned JSON:', text.substring(0, 200));
-    
+
     try {
       const analysis = JSON.parse(text);
       console.log('✅ Analysis complete - Score:', analysis.score);
@@ -165,7 +160,7 @@ DO NOT use example numbers. Analyze the actual resume content and provide real s
     } catch (parseError) {
       console.error('❌ JSON parse error:', parseError.message);
       console.error('📄 Text that failed:', text);
-      
+
       // Return default response if parsing fails
       res.json({
         score: 75,
@@ -182,7 +177,6 @@ DO NOT use example numbers. Analyze the actual resume content and provide real s
         summary: "Resume analyzed. Consider the suggestions above for improvements."
       });
     }
-
   } catch (error) {
     console.error('❌ Error:', error.message);
     res.status(500).json({ 
